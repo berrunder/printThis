@@ -36,7 +36,9 @@
     var opt;
     $.fn.printThis = function(options) {
         opt = $.extend({}, $.fn.printThis.defaults, options);
-        var $element = this instanceof jQuery ? this : $(this);
+        var $element = this instanceof jQuery ? this : $(this),
+            $iframe,
+            iframe;
 
         var strFrameName = "printThis-" + (new Date()).getTime();
 
@@ -44,35 +46,18 @@
             // Ugly IE hacks due to IE not inheriting document.domain from parent
             // checks if document.domain is set by comparing the host name against document.domain
             var iframeSrc = "javascript:document.write(\"<head><script>document.domain=\\\"" + document.domain + "\\\";</script></head><body></body>\")";
-            var printI = document.createElement('iframe');
-            printI.name = "printIframe";
-            printI.id = strFrameName;
-            printI.className = "MSIE";
-            document.body.appendChild(printI);
-            printI.src = iframeSrc;
-
+            iframe = document.createElement('iframe');
+            iframe.name = "iframeframe";
+            iframe.id = strFrameName;
+            iframe.className = "MSIE";
+            $iframe = $(iframe);
         } else {
             // other browsers inherit document.domain, and IE works if document.domain is not explicitly set
-            var $frame = $("<iframe id='" + strFrameName + "' name='printIframe' />");
-            $frame.appendTo("body");
+            $iframe = $("<iframe id='" + strFrameName + "' name='printIframe' />");
+            iframe = $iframe.get(0);
         }
 
-
-        var $iframe = $("#" + strFrameName);
-
-        // show frame if in debug mode
-        if (!opt.debug) $iframe.css({
-            position: "absolute",
-            width: "0px",
-            height: "0px",
-            left: "-600px",
-            top: "-600px"
-        });
-
-
-        // $iframe.ready() and $iframe.load were inconsistent between browsers    
-        setTimeout(function() {
-
+        var onFrameLoad = function() {
             var $doc = $iframe.contents(),
                 $head = $doc.find("head"),
                 $body = $doc.find("body");
@@ -81,14 +66,16 @@
             $head.append('<base href="' + document.location.protocol + '//' + document.location.host + '">');
 
             // import page stylesheets
-            if (opt.importCSS) $("link[rel=stylesheet]").each(function() {
-                var href = $(this).attr("href");
-                if (href) {
-                    var media = $(this).attr("media") || "all";
-                    $head.append("<link type='text/css' rel='stylesheet' href='" + href + "' media='" + media + "'>")
-                }
-            });
-            
+            if (opt.importCSS) {
+                $("link[rel=stylesheet]").each(function() {
+                    var href = $(this).attr("href");
+                    if (href) {
+                        var media = $(this).attr("media") || "all";
+                        $head.append("<link type='text/css' rel='stylesheet' href='" + href + "' media='" + media + "'>")
+                    }
+                });
+            }
+
             // import style tags
             if (opt.importStyle) $("style").each(function() {
                 $(this).clone().appendTo($head);
@@ -100,9 +87,9 @@
 
             // import additional stylesheet(s)
             if (opt.loadCSS) {
-               if( $.isArray(opt.loadCSS)) {
-                    jQuery.each(opt.loadCSS, function(index, value) {
-                       $head.append("<link type='text/css' rel='stylesheet' href='" + this + "'>");
+                if( $.isArray(opt.loadCSS)) {
+                    $.each(opt.loadCSS, function(index, value) {
+                        $head.append("<link type='text/css' rel='stylesheet' href='" + this + "'>");
                     });
                 } else {
                     $head.append("<link type='text/css' rel='stylesheet' href='" + opt.loadCSS + "'>");
@@ -200,8 +187,27 @@
 
             }, opt.printDelay);
 
-        }, 333);
+        };
 
+        if (iframe.attachEvent){
+            iframe.attachEvent("onload", onFrameLoad);
+        } else {
+            iframe.onload = onFrameLoad;
+        }
+
+        $iframe.appendTo("body");
+        if ($iframe.hasClass('MSIE')) {
+            iframe.src = iframeSrc;
+        }
+
+        // show frame if in debug mode
+        if (!opt.debug) $iframe.css({
+            position: "absolute",
+            width: "0px",
+            height: "0px",
+            left: "-600px",
+            top: "-600px"
+        });
     };
 
     // defaults
