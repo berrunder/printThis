@@ -25,7 +25,9 @@
  *      removeInline: false,        * remove all inline styles from print elements
  *      printDelay: 333,            * variable print delay
  *      header: null,               * prefix to html
- *      formValues: true            * preserve input/form values
+ *      formValues: true,            * preserve input/form values
+ *      charset: null,              * document charset
+ *      wrap: null                  * element to wrap document
  *  });
  *
  * Notes:
@@ -96,6 +98,11 @@
                 }
             }
 
+            // add charset
+            if (opt.charset) {
+                $head.append("<meta http-equiv=\"Content-Type\" content=\"text/html; charset="+opt.charset+"\" />");
+            }
+
             // print header
             if (opt.header) $body.append(opt.header);
 
@@ -164,6 +171,11 @@
                 } else {
                     $doc.find("body *").attr("style", "");
                 }
+            }
+
+            // wrap current html
+            if (opt.wrap) {
+                $body.children().eq(0).wrap(opt.wrap);
             }
 
             setTimeout(function() {
